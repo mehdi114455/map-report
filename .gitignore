@@ -23,6 +23,8 @@ serviceAccountKey.json
 # IDE
 .vscode/
 .idea/
+
+# Mac
 .DS_Store
 
 # Docker
