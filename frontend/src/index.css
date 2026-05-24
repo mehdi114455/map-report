@@ -1,0 +1,16 @@
+@import url("https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  background: #f6f9ff;
+  color: #151c22;
+  font-family: "Public Sans", system-ui, sans-serif;
+}
