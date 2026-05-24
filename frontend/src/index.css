@@ -1,12 +1,26 @@
 @import url("https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@theme {
+  --color-primary: #994700;
+  --color-primary-hover: #7a3800;
+  --color-accent: #E87722;
+  --color-navy: #3d5ca2;
+  --color-surface: #f6f9ff;
+  --color-surface-container: #e8eef7;
+  --color-ink: #151c22;
+  --color-muted: #564337;
+  --color-outline: #DEE2E6;
+  --color-success: #1f7a3a;
+  --color-error: #ba1a1a;
 
-html,
-body,
-#root {
+  --font-sans: "Public Sans", system-ui, sans-serif;
+
+  --radius: 0.5rem;
+  --radius-lg: 1rem;
+}
+
+html, body, #root {
   height: 100%;
 }
 body {

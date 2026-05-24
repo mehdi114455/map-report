@@ -1,14 +1,16 @@
 services:
   db:
     image: postgis/postgis:16-3.4
-    ports:
-      - "5433:5432"   # host changed to 5433 due to a conflict
+    container_name: mapreport-db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: mapreport
-      POSTGRES_PASSWORD: mapreport
+      POSTGRES_PASSWORD: mapreport_dev_pw
       POSTGRES_DB: mapreport
+    ports:
+      - "5433:5432"   # host:container — using 5433 to avoid conflict
     volumes:
-      - map-report-db:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
 
 volumes:
-  map-report-db:
+  postgres-data:
