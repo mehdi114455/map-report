@@ -14,11 +14,19 @@ export default function Home() {
       .catch((e) => setErr(e.message));
   }, []);
 
+// -----------For Testing-----------------
+
+  // const showToken = async () => {
+  // const token = await user.getIdToken();
+  // console.log(token);
+  // await navigator.clipboard.writeText(token);
+  // alert("Token copied to clipboard");};
+// ---------------------------------------
+
   return (
     <div>
       <h1 className="text-4xl font-bold mb-2">Hello, Citizen</h1>
       <p className="text-muted mb-6">Signed in as {user?.email}</p>
-
       <div className="bg-white border border-outline rounded-lg p-6">
         <h2 className="font-semibold mb-2">Backend round-trip</h2>
         {err && <p className="text-error">{err}</p>}
@@ -29,7 +37,13 @@ export default function Home() {
         ) : (
           <p className="text-muted">Calling /me…</p>
         )}
+
+// -----------For Testing-----------------
+        {/*<button onClick={showToken}>Copy ID token</button>*/}
+// ---------------------------------------
+
       </div>
     </div>
+
   );
 }
