@@ -1,66 +1,37 @@
-import { BrowserRouter, Routes, Route, Navigate, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./AuthContext";
+import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Home from "./pages/Home";
+import NewReport from "./pages/NewReport";
+import MyReports from "./pages/MyReports";
+import MapScreen from "./pages/MapScreen";
 
-function ProtectedRoute({ children }) {
+function ProtectedLayout() {
   const { user, loading } = useAuth();
-  if (loading) return <div className="p-8">Loading…</div>;
+  if (loading) return <div className="p-8 text-muted">Loading…</div>;
   if (!user) return <Navigate to="/login" replace />;
-  return children;
-}
-
-function TopBar() {
-  const { user, logout } = useAuth();
-  return (
-    <header className="border-b border-outline bg-white">
-      <div className="max-w-page mx-auto flex items-center justify-between px-6 py-3">
-        <Link to="/" className="font-bold text-lg">
-          <span className="text-accent">●</span> CivicReport AI
-        </Link>
-        <nav className="flex items-center gap-4 text-sm">
-          {user ? (
-            <>
-              <span className="text-muted">{user.email}</span>
-              <button
-                onClick={logout}
-                className="px-3 py-1.5 rounded border border-outline hover:bg-surface-container"
-              >
-                Log out
-              </button>
-            </>
-          ) : (
-            <>
-              <Link to="/login" className="hover:text-accent">Log in</Link>
-              <Link to="/signup" className="hover:text-accent">Sign up</Link>
-            </>
-          )}
-        </nav>
-      </div>
-    </header>
-  );
+  return <Layout />;
 }
 
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <TopBar />
-        <main className="max-w-page mx-auto px-6 py-8">
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Home />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </main>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+
+          {/* Protected routes share the Layout (header + bottom nav) */}
+          <Route element={<ProtectedLayout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/report" element={<NewReport />} />
+            <Route path="/my" element={<MyReports />} />
+            <Route path="/map" element={<MapScreen />} />
+          </Route>
+        </Routes>
       </BrowserRouter>
     </AuthProvider>
   );
