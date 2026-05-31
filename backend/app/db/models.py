@@ -1,8 +1,6 @@
 from datetime import datetime
 from typing import Optional, List
-from sqlalchemy import (
-    String, Integer, Text, DateTime, ForeignKey, Index, func, CheckConstraint,
-)
+from sqlalchemy import (String, Integer, Text, DateTime, ForeignKey, Index, func, CheckConstraint,)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from geoalchemy2 import Geography
 from app.db.base import Base
@@ -97,6 +95,10 @@ class Report(Base):
 
     # Image URL returned by Firebase Storage (added in Part 7; nullable for now).
     image_url: Mapped[Optional[str]] = mapped_column(String(1024))
+
+    # Confidence of the AI category prediction (0.0–1.0). Surfaced to admins
+    # so they can prioritize reviewing low-confidence classifications.
+    ai_confidence: Mapped[Optional[float]] = mapped_column(nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

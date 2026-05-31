@@ -20,6 +20,7 @@ class ReportOut(BaseModel):
     priority_level: str
     current_status: str
     image_url: str | None = None
+    ai_confidence: float | None = None
     created_at: datetime
     updated_at: datetime
     category: CategoryOut

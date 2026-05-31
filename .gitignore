@@ -30,3 +30,7 @@ serviceAccountKey.json
 
 # Docker
 postgres-data/
+
+# ML
+backend/app/ml/experiments/
+backend/app/ml/*.pkl

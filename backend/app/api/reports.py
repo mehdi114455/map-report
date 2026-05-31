@@ -10,7 +10,9 @@ from app.db.session import get_db
 from app.db.models import User, Report, Location, StatusHistory
 from app.schemas.report import ReportCreate, ReportOut
 from app.services.sanitize import sanitize_text
-from app.services.classifier import classify
+# from app.services.classifier import classify
+from app.services.classifier import classify_with_confidence
+
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -43,7 +45,8 @@ def create_report(
     db.add(loc)
     db.flush()  
 
-    category = classify(clean_desc, db)
+    # category = classify(clean_desc, db)
+    category, confidence, _uncertain = classify_with_confidence(clean_desc, db)
 
     report = Report(
         user_id=user.user_id,
@@ -54,6 +57,7 @@ def create_report(
         priority_level="normal",
         current_status="pending",
         image_url=payload.image_url,
+        ai_confidence=confidence,
     )
     db.add(report)
     db.flush()
