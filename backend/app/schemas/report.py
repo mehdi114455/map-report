@@ -21,6 +21,14 @@ class ReportCreate(BaseModel):
         return v
 
 
+class ClusterOut(BaseModel):
+    cluster_id: int
+    repeated_count: int
+    cluster_status: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ReportOut(BaseModel):
     report_id: int
     user_id: str
@@ -30,6 +38,7 @@ class ReportOut(BaseModel):
     current_status: str
     image_url: str | None = None
     ai_confidence: float | None = None
+    cluster: ClusterOut | None = None
     created_at: datetime
     updated_at: datetime
     category: CategoryOut

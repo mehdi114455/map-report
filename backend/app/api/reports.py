@@ -12,6 +12,8 @@ from app.schemas.report import ReportCreate, ReportOut
 from app.services.sanitize import sanitize_text
 # from app.services.classifier import classify
 from app.services.classifier import classify_with_confidence
+from app.services.embedder import embed
+from app.services.duplicates import find_duplicate_cluster, link_to_cluster
 
 
 router = APIRouter(prefix="/reports", tags=["reports"])
@@ -43,10 +45,14 @@ def create_report(
         geog=from_shape(point, srid=4326),
     )
     db.add(loc)
-    db.flush()  
+    db.flush()
 
-    # category = classify(clean_desc, db)
+    # AI/NLP step: classify category.
     category, confidence, _uncertain = classify_with_confidence(clean_desc, db)
+
+    # Semantic embedding (used for duplicate detection now and any future
+    # similar-search features).
+    embedding = embed(clean_desc)
 
     report = Report(
         user_id=user.user_id,
@@ -58,11 +64,19 @@ def create_report(
         current_status="pending",
         image_url=payload.image_url,
         ai_confidence=confidence,
+        description_embedding=embedding,
     )
     db.add(report)
-    db.flush()
+    db.flush()  # get report_id
 
-    # Initial status history entry; gives admins an audit trail from day 1.
+    # Duplicate detection, search for nearby semantically-similar reports.
+    match, score = find_duplicate_cluster(
+        db, embedding, loc.geog, exclude_report_id=report.report_id
+    )
+    if match is not None:
+        link_to_cluster(db, report, match)
+
+    # Initial status history entry.
     db.add(StatusHistory(report_id=report.report_id, status="pending", status_note="Auto-created."))
 
     db.commit()

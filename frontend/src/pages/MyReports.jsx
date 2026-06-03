@@ -91,7 +91,14 @@ export default function MyReports() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <div className="min-w-0">
-                    <p className="text-xs text-muted">#{r.report_id} · {r.category.category_name}</p>
+                    <p className="text-xs text-muted">
+                      #{r.report_id} · {r.category.category_name}
+                      {r.cluster && r.cluster.repeated_count > 1 && (
+                        <span className="ml-2 inline-flex items-center gap-1 bg-orange-50 text-primary border border-orange-200 rounded-full px-2 py-0.5 text-xs font-semibold">
+                          {r.cluster.repeated_count}× reported
+                        </span>
+                      )}
+                    </p>
                     <h3 className="font-semibold text-ink mt-0.5">
                       {r.title || r.description.slice(0, 80)}
                     </h3>
