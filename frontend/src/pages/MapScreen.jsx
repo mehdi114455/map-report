@@ -53,8 +53,16 @@ export default function MapScreen() {
           />
           {reports.map((r) => (
             <Marker key={r.report_id} position={[r.location.latitude, r.location.longitude]}>
+
               <Popup>
-                <div className="space-y-1 min-w-[180px]">
+                <div className="space-y-1 min-w-[200px]">
+                  {r.image_url && (
+                    <img
+                      src={r.image_url}
+                      alt=""
+                      className="w-full h-24 object-cover rounded mb-2"
+                    />
+                  )}
                   <p className="text-xs text-gray-500">#{r.report_id} · {r.category.category_name}</p>
                   <p className="font-semibold">{r.title || r.description.slice(0, 60)}</p>
                   <StatusChip status={r.current_status} />
@@ -63,6 +71,7 @@ export default function MapScreen() {
                   </p>
                 </div>
               </Popup>
+              
             </Marker>
           ))}
         </MapContainer>

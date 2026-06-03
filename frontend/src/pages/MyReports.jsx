@@ -79,23 +79,35 @@ export default function MyReports() {
             key={r.report_id}
             className="bg-white border border-outline rounded-lg p-4 hover:border-accent transition-colors"
           >
-            <div className="flex items-start justify-between gap-3 mb-2">
-              <div className="min-w-0">
-                <p className="text-xs text-muted">#{r.report_id} · {r.category.category_name}</p>
-                <h3 className="font-semibold text-ink mt-0.5">
-                  {r.title || r.description.slice(0, 80)}
-                </h3>
+            <div className="flex gap-3">
+              {r.image_url && (
+                <img
+                  src={r.image_url}
+                  alt=""
+                  loading="lazy"
+                  className="w-20 h-20 rounded object-cover flex-shrink-0 bg-surface-container"
+                />
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted">#{r.report_id} · {r.category.category_name}</p>
+                    <h3 className="font-semibold text-ink mt-0.5">
+                      {r.title || r.description.slice(0, 80)}
+                    </h3>
+                  </div>
+                  <StatusChip status={r.current_status} />
+                </div>
+                <p className="text-sm text-muted line-clamp-2">{r.description}</p>
+                <div className="flex items-center gap-3 text-xs text-muted mt-3">
+                  <span className="inline-flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5" />
+                    {r.location.city || `${r.location.latitude.toFixed(3)}, ${r.location.longitude.toFixed(3)}`}
+                  </span>
+                  <span>·</span>
+                  <span>{formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}</span>
+                </div>
               </div>
-              <StatusChip status={r.current_status} />
-            </div>
-            <p className="text-sm text-muted line-clamp-2">{r.description}</p>
-            <div className="flex items-center gap-3 text-xs text-muted mt-3">
-              <span className="inline-flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5" />
-                {r.location.city || `${r.location.latitude.toFixed(3)}, ${r.location.longitude.toFixed(3)}`}
-              </span>
-              <span>·</span>
-              <span>{formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}</span>
             </div>
           </article>
         ))}
