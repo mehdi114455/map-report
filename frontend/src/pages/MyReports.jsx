@@ -3,7 +3,9 @@ import { Link, useLocation } from "react-router-dom";
 import { ClipboardList, MapPin, FilePlus } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { api } from "../api";
+import { useReportsSocket } from "../lib/useReportsSocket";
 import StatusChip from "../components/StatusChip";
+
 
 export default function MyReports() {
   const [reports, setReports] = useState([]);
@@ -19,6 +21,17 @@ export default function MyReports() {
       .catch((e) => setErr(e.message))
       .finally(() => setLoading(false));
   }, []);
+
+  useReportsSocket((msg) => {
+    if (msg.type !== "status_change") return;
+    setReports((curr) =>
+      curr.map((r) =>
+        r.report_id === msg.report_id
+          ? { ...r, current_status: msg.current_status, updated_at: msg.updated_at }
+          : r
+      )
+    );
+  });
 
   // Dashboard summary
   const totals = {

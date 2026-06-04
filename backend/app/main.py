@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.firebase import init_firebase
 from app.api.deps import sync_current_user
-from app.api import reports, categories
+from app.api import reports, categories, ws, admin
 from app.db.models import User
 from app.schemas.user import UserOut
 
@@ -36,3 +36,5 @@ def me(user: User = Depends(sync_current_user)) -> User:
 
 app.include_router(categories.router)
 app.include_router(reports.router)
+app.include_router(ws.router)
+app.include_router(admin.router)

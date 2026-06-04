@@ -8,12 +8,13 @@ from shapely.geometry import Point
 from app.api.deps import sync_current_user
 from app.db.session import get_db
 from app.db.models import User, Report, Location, StatusHistory
-from app.schemas.report import ReportCreate, ReportOut
+from app.schemas.report import ReportCreate, ReportOut, ReportStatusUpdate
 from app.services.sanitize import sanitize_text
 # from app.services.classifier import classify
 from app.services.classifier import classify_with_confidence
 from app.services.embedder import embed
 from app.services.duplicates import find_duplicate_cluster, link_to_cluster
+
 
 
 router = APIRouter(prefix="/reports", tags=["reports"])
@@ -108,4 +109,44 @@ def get_report(
     # Residents can only fetch their own; admins can fetch any.
     if user.role != "admin" and report.user_id != user.user_id:
         raise HTTPException(404, "Report not found.")
+    return report
+
+
+
+def require_admin(user: User = Depends(sync_current_user)) -> User:
+    """Dependency that 403s non-admins."""
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin role required.")
+    return user
+
+
+@router.patch("/{report_id}/status", response_model=ReportOut)
+def update_status(
+    report_id: int,
+    payload: ReportStatusUpdate,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> Report:
+    report = db.get(Report, report_id)
+    if report is None:
+        raise HTTPException(404, "Report not found.")
+
+    # Skip no-op updates (admin clicked Save without changing anything).
+    if report.current_status == payload.status and not payload.status_note:
+        return report
+
+    report.current_status = payload.status
+    db.add(StatusHistory(
+        report_id=report.report_id,
+        status=payload.status,
+        status_note=payload.status_note,
+    ))
+    db.commit()
+    db.refresh(report)
+
+    # Broadcasting the change so any logged-in resident gets the update without a manual refresh.
+    from app.api.ws import broadcast_status_change
+    import asyncio
+    asyncio.create_task(broadcast_status_change(report))
+
     return report

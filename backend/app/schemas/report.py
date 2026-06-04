@@ -29,6 +29,18 @@ class ClusterOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ReportStatusUpdate(BaseModel):
+    status: str = Field(..., min_length=1, max_length=32)
+    status_note: str | None = Field(None, max_length=2000)
+    @field_validator("status")
+    @classmethod
+    def _check_status(cls, v: str) -> str:
+        allowed = {"pending", "reviewing", "in_progress", "resolved", "rejected"}
+        if v not in allowed:
+            raise ValueError(f"status must be one of: {', '.join(sorted(allowed))}")
+        return v
+
+
 class ReportOut(BaseModel):
     report_id: int
     user_id: str

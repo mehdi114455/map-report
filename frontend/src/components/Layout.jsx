@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
-import { Home, FilePlus, Map, ClipboardList, Building2 } from "lucide-react";
+import { Home, FilePlus, Map, ClipboardList, Building2, Shield } from "lucide-react";
 import { useAuth } from "../AuthContext";
+import { useEffect, useState } from "react";
 
 const navItems = [
   { to: "/",         icon: Home,          label: "Home" },
@@ -11,10 +12,17 @@ const navItems = [
 
 export default function Layout() {
   const { user, logout } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    user.getIdTokenResult().then((res) => {
+      setIsAdmin(res.claims.role === "admin");
+    });
+  }, [user]);
 
   return (
     <div className="min-h-full pb-28 lg:pb-8">
-      {/* Top header */}
       <header className="sticky top-0 z-20 border-b border-outline bg-white">
         <div className="max-w-page mx-auto flex items-center justify-between px-4 lg:px-6 py-3">
           <Link to="/" className="flex items-center gap-2">
@@ -24,6 +32,14 @@ export default function Layout() {
           <div className="flex items-center gap-3 text-sm">
             {user && (
               <>
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    className="hidden sm:inline-flex items-center gap-1 text-navy hover:text-accent font-semibold"
+                  >
+                    <Shield className="w-4 h-4" /> Admin
+                  </Link>
+                )}
                 <span className="hidden sm:inline text-muted">{user.email}</span>
                 <button
                   onClick={logout}
@@ -37,12 +53,10 @@ export default function Layout() {
         </div>
       </header>
 
-      {/* Page content */}
       <main className="max-w-page mx-auto px-4 lg:px-6 py-6">
         <Outlet />
       </main>
 
-      {/* Bottom nav on mobile, sticky bottom bar on desktop too */}
       <nav className="fixed bottom-0 inset-x-0 z-20 bg-white border-t border-outline">
         <div className="max-w-page mx-auto grid grid-cols-4">
           {navItems.map(({ to, icon: Icon, label }) => (
