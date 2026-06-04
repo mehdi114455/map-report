@@ -6,6 +6,7 @@ import "leaflet/dist/leaflet.css";
 import { api } from "../api";
 import StatusChip from "../components/StatusChip";
 import { useReportsSocket } from "../lib/useReportsSocket";
+import { Link } from "react-router-dom";
 
 const STATUS_OPTIONS = ["pending", "reviewing", "in_progress", "resolved", "rejected"];
 
@@ -39,11 +40,12 @@ export default function AdminDashboard() {
 
   async function setStatus(reportId, newStatus) {
     try {
-      await api.patch(`/reports/${reportId}/status`, { status: newStatus });
-      // The WebSocket event will trigger a refresh, but also update locally
-      // for immediate feedback.
+      const res = await api.patch(`/reports/${reportId}/status`, { status: newStatus });
+      // Response is now a list of affected reports (one if standalone, many if cluster).
+      const updated = res.data;
+      const updatedIds = new Set(updated.map((r) => r.report_id));
       setUrgent((curr) =>
-        curr.map((r) => r.report_id === reportId ? { ...r, current_status: newStatus } : r)
+        curr.map((r) => (updatedIds.has(r.report_id) ? { ...r, current_status: newStatus } : r))
       );
     } catch (e) {
       alert(e.response?.data?.detail || e.message);
@@ -84,35 +86,58 @@ export default function AdminDashboard() {
 
       {/* Hotspot map */}
       <section className="bg-white border border-outline rounded-lg p-5">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <h2 className="text-xl font-bold text-ink">Hotspot Map</h2>
-          <span className="text-xs text-muted">{hotspots.length} active cluster{hotspots.length === 1 ? "" : "s"}</span>
+          <span className="text-xs text-muted">
+            {hotspots.length} active cluster{hotspots.length === 1 ? "" : "s"}
+          </span>
         </div>
-        <div className="rounded-lg overflow-hidden border border-outline" style={{ height: 360 }}>
-          <MapContainer center={center} zoom={12} style={{ height: "100%", width: "100%" }}>
-            <TileLayer
-              attribution='&copy; OpenStreetMap'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            {hotspots.map((h) => (
-              <CircleMarker
-                key={h.cluster_id}
-                center={[h.latitude, h.longitude]}
-                // Radius scales with repeat count, capped so single hotspots don't dominate.
-                radius={Math.min(35, 8 + h.repeated_count * 4)}
-                pathOptions={{ color: "#E87722", fillColor: "#E87722", fillOpacity: 0.35 }}
-              >
-                <Popup>
-                  <div className="space-y-1">
-                    <p className="font-semibold">Cluster #{h.cluster_id}</p>
-                    <p className="text-sm">{h.repeated_count} reports merged</p>
-                    <p className="text-xs text-gray-500">Status: {h.cluster_status}</p>
-                  </div>
-                </Popup>
-              </CircleMarker>
-            ))}
-          </MapContainer>
-        </div>
+
+        {hotspots.length === 0 ? (
+          <div className="rounded-lg border-2 border-dashed border-outline p-10 text-center text-muted">
+            <p>No duplicate clusters yet.</p>
+            <p className="text-xs mt-1">Hotspots appear when multiple residents report the same issue nearby.</p>
+          </div>
+        ) : (
+          <div className="rounded-lg overflow-hidden border border-outline" style={{ height: 420 }}>
+            <MapContainer center={center} zoom={13} style={{ height: "100%", width: "100%" }}>
+              {/* Lighter, English-labeled tiles read better than default OSM for a dashboard. */}
+              <TileLayer
+                attribution='&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; OpenStreetMap'
+                url="https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png"
+              />
+              {hotspots.map((h) => {
+                // Scale circle radius (in pixels) with repeat count, with a sensible floor and cap.
+                const radius = Math.min(40, 12 + h.repeated_count * 5);
+                return (
+                  <CircleMarker
+                    key={h.cluster_id}
+                    center={[h.latitude, h.longitude]}
+                    radius={radius}
+                    pathOptions={{
+                      color: "#E87722",
+                      weight: 2,
+                      fillColor: "#E87722",
+                      fillOpacity: 0.4,
+                    }}
+                  >
+                    <Popup>
+                      <div className="space-y-1 min-w-[180px]">
+                        <p className="font-semibold">Cluster #{h.cluster_id}</p>
+                        <p className="text-sm">{h.repeated_count} reports merged</p>
+                        <p className="text-xs text-gray-500">Status: {h.cluster_status}</p>
+                      </div>
+                    </Popup>
+                  </CircleMarker>
+                );
+              })}
+            </MapContainer>
+          </div>
+        )}
+
+        <p className="text-xs text-muted mt-3">
+          Circle size scales with the number of merged reports. Larger circles = more residents affected.
+        </p>
       </section>
 
       {/* Urgent reports */}
@@ -121,33 +146,49 @@ export default function AdminDashboard() {
         {urgent.length === 0 && (
           <p className="text-muted">Nothing urgent right now — everything's been reviewed.</p>
         )}
-        <div className="space-y-3">
+
+<div className="space-y-3">
           {urgent.map((r) => (
-            <article key={r.report_id} className="bg-white border border-outline rounded-lg p-4">
-              <div className="flex items-start justify-between gap-3 mb-2">
-                <div className="min-w-0">
-                  <p className="text-xs text-muted">
-                    #{r.report_id} · {r.category_name}
-                    {r.repeated_count > 1 && (
-                      <span className="ml-2 inline-flex items-center gap-1 bg-orange-50 text-primary border border-orange-200 rounded-full px-2 py-0.5 text-xs font-semibold">
-                        {r.repeated_count}× reported
-                      </span>
-                    )}
-                  </p>
-                  <h3 className="font-semibold text-ink mt-0.5">{r.title}</h3>
+            <article key={r.report_id} className="bg-white border border-outline rounded-lg p-4 hover:border-accent transition-colors">
+              <Link to={`/reports/${r.report_id}`} className="block">
+                <div className="flex gap-3">
+                  {r.image_url && (
+                    <img
+                      src={r.image_url}
+                      alt=""
+                      loading="lazy"
+                      className="w-20 h-20 rounded object-cover flex-shrink-0 bg-surface-container"
+                    />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="min-w-0">
+                        <p className="text-xs text-muted">
+                          #{r.report_id} · {r.category_name}
+                          {r.repeated_count > 1 && (
+                            <span className="ml-2 inline-flex items-center gap-1 bg-orange-50 text-primary border border-orange-200 rounded-full px-2 py-0.5 text-xs font-semibold">
+                              {r.repeated_count}× reported
+                            </span>
+                          )}
+                        </p>
+                        <h3 className="font-semibold text-ink mt-0.5">{r.title}</h3>
+                      </div>
+                      <StatusChip status={r.current_status} />
+                    </div>
+                    <p className="text-sm text-muted line-clamp-2">{r.description}</p>
+                    <span className="text-xs text-muted mt-3 block">
+                      {r.city || `${r.latitude.toFixed(3)}, ${r.longitude.toFixed(3)}`}
+                      {" · "}
+                      {formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}
+                    </span>
+                  </div>
                 </div>
-                <StatusChip status={r.current_status} />
-              </div>
-              <p className="text-sm text-muted line-clamp-2">{r.description}</p>
-              <div className="flex items-center justify-between gap-3 mt-3">
-                <span className="text-xs text-muted">
-                  {r.city || `${r.latitude.toFixed(3)}, ${r.longitude.toFixed(3)}`}
-                  {" · "}
-                  {formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}
-                </span>
+              </Link>
+              {/* Status selector OUTSIDE the link so clicks don't navigate */}
+              <div className="flex justify-end mt-3 pt-3 border-t border-outline">
                 <select
                   value={r.current_status}
-                  onChange={(e) => setStatus(r.report_id, e.target.value)}
+                  onChange={(e) => { e.stopPropagation(); setStatus(r.report_id, e.target.value); }}
                   className="text-sm border border-outline rounded px-2 py-1 focus:border-navy outline-none"
                 >
                   {STATUS_OPTIONS.map((s) => (
@@ -155,7 +196,7 @@ export default function AdminDashboard() {
                   ))}
                 </select>
               </div>
-            </article>
+             </article>
           ))}
         </div>
       </section>

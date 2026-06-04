@@ -92,8 +92,9 @@ def urgent_reports(
     limit: int = 10,
 ) -> list[dict]:
     """
-    Reports that need admin attention: pending or reviewing, sorted by
-    repeated_count (most-reported first).
+    Reports that need admin attention, grouped by cluster. Each cluster is
+    represented once; standalone reports appear as-is. Sorted by repeated_count
+    (highest first), then recency.
     """
     stmt = (
         select(Report, DuplicateCluster.repeated_count)
@@ -103,22 +104,32 @@ def urgent_reports(
             func.coalesce(DuplicateCluster.repeated_count, 1).desc(),
             Report.created_at.desc(),
         )
-        .limit(limit)
     )
     rows = db.execute(stmt).all()
-    return [
-        {
-            "report_id": r.Report.report_id,
-            "title": r.Report.title or r.Report.description[:80],
-            "description": r.Report.description,
-            "category_id": r.Report.category_id,
-            "category_name": r.Report.category.category_name,
-            "current_status": r.Report.current_status,
+
+    seen_clusters: set[int] = set()
+    out: list[dict] = []
+    for r in rows:
+        rep = r.Report
+        if rep.cluster_id is not None:
+            if rep.cluster_id in seen_clusters:
+                continue
+            seen_clusters.add(rep.cluster_id)
+        out.append({
+            "report_id": rep.report_id,
+            "cluster_id": rep.cluster_id,
+            "title": rep.title or rep.description[:80],
+            "description": rep.description,
+            "category_id": rep.category_id,
+            "category_name": rep.category.category_name,
+            "current_status": rep.current_status,
             "repeated_count": r.repeated_count or 1,
-            "city": r.Report.location.city,
-            "latitude": r.Report.location.latitude,
-            "longitude": r.Report.location.longitude,
-            "created_at": r.Report.created_at.isoformat(),
-        }
-        for r in rows
-    ]
+            "image_url": rep.image_url,
+            "city": rep.location.city,
+            "latitude": rep.location.latitude,
+            "longitude": rep.location.longitude,
+            "created_at": rep.created_at.isoformat(),
+        })
+        if len(out) >= limit:
+            break
+    return out

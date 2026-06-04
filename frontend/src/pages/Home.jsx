@@ -119,7 +119,7 @@ function StatCard({ icon: Icon, iconBg, iconColor, value, label }) {
 function ReportCard({ report }) {
   return (
     <Link
-      to={`/my`}
+      to={`/reports/${report.report_id}`}
       className="block bg-white border border-outline rounded-lg p-4 hover:border-accent transition-colors"
     >
       <div className="flex items-start gap-3">

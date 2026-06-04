@@ -9,6 +9,7 @@ import NewReport from "./pages/NewReport";
 import MyReports from "./pages/MyReports";
 import MapScreen from "./pages/MapScreen";
 import AdminDashboard from "./pages/AdminDashboard";
+import ReportDetail from "./pages/ReportDetail";
 
 function ProtectedLayout() {
   const { user, loading } = useAuth();
@@ -52,6 +53,7 @@ export default function App() {
             <Route path="/my" element={<MyReports />} />
             <Route path="/map" element={<MapScreen />} />
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+            <Route path="/reports/:id" element={<ReportDetail />} />
           </Route>
         </Routes>
       </BrowserRouter>

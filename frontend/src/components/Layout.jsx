@@ -30,17 +30,17 @@ export default function Layout() {
             <span className="font-bold text-lg text-ink">CivicReport AI</span>
           </Link>
           <div className="flex items-center gap-3 text-sm">
-            {user && (
-              <>
-                {isAdmin && (
+            {user && ( <>{isAdmin && (
                   <Link
                     to="/admin"
-                    className="hidden sm:inline-flex items-center gap-1 text-navy hover:text-accent font-semibold"
+                    className="inline-flex items-center gap-1 text-navy hover:text-accent font-semibold"
                   >
-                    <Shield className="w-4 h-4" /> Admin
+                    <Shield className="w-4 h-4" />
+                    <span className="hidden sm:inline">Admin</span>
                   </Link>
                 )}
                 <span className="hidden sm:inline text-muted">{user.email}</span>
+                
                 <button
                   onClick={logout}
                   className="px-3 py-1.5 rounded border border-outline hover:bg-surface-container text-ink"

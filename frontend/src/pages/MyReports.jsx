@@ -1,25 +1,28 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { ClipboardList, MapPin, FilePlus } from "lucide-react";
+import { ClipboardList, MapPin, FilePlus, Users } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { api } from "../api";
-import { useReportsSocket } from "../lib/useReportsSocket";
 import StatusChip from "../components/StatusChip";
-
+import { useReportsSocket } from "../lib/useReportsSocket";
 
 export default function MyReports() {
   const [reports, setReports] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState(null);
+  const [statusFilter, setStatusFilter] = useState(null);
   const { state } = useLocation();
   const justCreatedId = state?.newReportId;
 
+  function load() {
+    api.get("/reports").then((r) => setReports(r.data)).catch((e) => setErr(e.message)).finally(() => setLoading(false));
+  }
+
   useEffect(() => {
-    api
-      .get("/reports")
-      .then((r) => setReports(r.data))
-      .catch((e) => setErr(e.message))
-      .finally(() => setLoading(false));
+    load();
+    api.get("/categories").then((r) => setCategories(r.data)).catch(() => {});
   }, []);
 
   useReportsSocket((msg) => {
@@ -33,13 +36,18 @@ export default function MyReports() {
     );
   });
 
-  // Dashboard summary
+  const filtered = useMemo(() => {
+    return reports.filter((r) => {
+      if (categoryFilter && r.category.category_id !== categoryFilter) return false;
+      if (statusFilter && r.current_status !== statusFilter) return false;
+      return true;
+    });
+  }, [reports, categoryFilter, statusFilter]);
+
   const totals = {
     total: reports.length,
     resolved: reports.filter((r) => r.current_status === "resolved").length,
-    inProgress: reports.filter((r) =>
-      ["in_progress", "reviewing"].includes(r.current_status)
-    ).length,
+    inProgress: reports.filter((r) => ["in_progress", "reviewing"].includes(r.current_status)).length,
     pending: reports.filter((r) => r.current_status === "pending").length,
   };
 
@@ -48,7 +56,7 @@ export default function MyReports() {
       <header className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-3xl font-bold text-ink">My Reports</h1>
-          <p className="text-muted mt-1">Track your submissions and their status.</p>
+          <p className="text-muted mt-1">Track your submissions and any clusters you're part of.</p>
         </div>
         <Link
           to="/report"
@@ -58,13 +66,30 @@ export default function MyReports() {
         </Link>
       </header>
 
-      {/* Summary cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <SummaryCard label="Total" value={totals.total} />
-        <SummaryCard label="Resolved" value={totals.resolved} accent="text-success" />
-        <SummaryCard label="In Progress" value={totals.inProgress} accent="text-primary" />
-        <SummaryCard label="Pending" value={totals.pending} accent="text-navy" />
+        <SummaryCard label="Total" value={totals.total} onClick={() => setStatusFilter(null)} active={!statusFilter} />
+        <SummaryCard label="Resolved" value={totals.resolved} accent="text-success" onClick={() => setStatusFilter("resolved")} active={statusFilter === "resolved"} />
+        <SummaryCard label="In Progress" value={totals.inProgress} accent="text-primary" onClick={() => setStatusFilter("in_progress")} active={statusFilter === "in_progress"} />
+        <SummaryCard label="Pending" value={totals.pending} accent="text-navy" onClick={() => setStatusFilter("pending")} active={statusFilter === "pending"} />
       </div>
+
+      {/* Category filter  */}
+      {categories.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          <FilterChip active={!categoryFilter} onClick={() => setCategoryFilter(null)}>
+            All categories
+          </FilterChip>
+          {categories.map((c) => (
+            <FilterChip
+              key={c.category_id}
+              active={categoryFilter === c.category_id}
+              onClick={() => setCategoryFilter(c.category_id)}
+            >
+              {c.category_name}
+            </FilterChip>
+          ))}
+        </div>
+      )}
 
       {justCreatedId && (
         <div className="bg-green-50 border border-green-200 text-success rounded p-3 text-sm">
@@ -72,25 +97,30 @@ export default function MyReports() {
         </div>
       )}
 
-      {/* List */}
       {loading && <p className="text-muted">Loading…</p>}
       {err && <p className="text-error">{err}</p>}
 
-      {!loading && reports.length === 0 && (
+      {!loading && filtered.length === 0 && (
         <div className="bg-white border border-outline rounded-lg p-10 text-center">
           <ClipboardList className="w-10 h-10 mx-auto text-muted mb-3" />
-          <p className="text-ink font-semibold">No reports yet</p>
-          <p className="text-muted text-sm mt-1">
-            Tap <Link to="/report" className="text-accent font-semibold">New Report</Link> to submit your first one.
-          </p>
+          <p className="text-ink font-semibold">No reports match the current filters</p>
+          {(categoryFilter || statusFilter) && (
+            <button
+              onClick={() => { setCategoryFilter(null); setStatusFilter(null); }}
+              className="text-accent font-semibold text-sm mt-2"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
       )}
 
       <div className="space-y-3">
-        {reports.map((r) => (
-          <article
+        {filtered.map((r) => (
+          <Link
             key={r.report_id}
-            className="bg-white border border-outline rounded-lg p-4 hover:border-accent transition-colors"
+            to={`/reports/${r.report_id}`}
+            className="block bg-white border border-outline rounded-lg p-4 hover:border-accent transition-colors"
           >
             <div className="flex gap-3">
               {r.image_url && (
@@ -108,7 +138,7 @@ export default function MyReports() {
                       #{r.report_id} · {r.category.category_name}
                       {r.cluster && r.cluster.repeated_count > 1 && (
                         <span className="ml-2 inline-flex items-center gap-1 bg-orange-50 text-primary border border-orange-200 rounded-full px-2 py-0.5 text-xs font-semibold">
-                          {r.cluster.repeated_count}× reported
+                          <Users className="w-3 h-3" /> {r.cluster.repeated_count}× reported
                         </span>
                       )}
                     </p>
@@ -129,18 +159,38 @@ export default function MyReports() {
                 </div>
               </div>
             </div>
-          </article>
+          </Link>
         ))}
       </div>
     </div>
   );
 }
 
-function SummaryCard({ label, value, accent = "text-ink" }) {
+function SummaryCard({ label, value, accent = "text-ink", onClick, active }) {
   return (
-    <div className="bg-white border border-outline rounded-lg p-4">
+    <button
+      onClick={onClick}
+      className={`bg-white border rounded-lg p-4 text-left transition-colors ${
+        active ? "border-accent" : "border-outline hover:border-accent"
+      }`}
+    >
       <div className={`text-3xl font-bold ${accent}`}>{value}</div>
       <div className="text-xs uppercase tracking-wide text-muted font-semibold mt-1">{label}</div>
-    </div>
+    </button>
+  );
+}
+
+function FilterChip({ active, onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition-colors ${
+        active
+          ? "bg-accent text-white border-accent"
+          : "bg-white text-ink border-outline hover:border-accent"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
