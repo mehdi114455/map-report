@@ -118,15 +118,15 @@ export default function Home() {
       </div>
 
       {/* High Impact User banner */}
-      <div className="bg-surface-container rounded-lg p-4 flex items-center gap-3">
-        <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-          <TrendingUp className="w-5 h-5 text-accent" />
-        </div>
-        <div>
-          <p className="font-semibold text-ink">High Impact User</p>
-          <p className="text-sm text-muted">Top 15% of contributors this month</p>
-        </div>
-      </div>
+      {/*<div className="bg-surface-container rounded-lg p-4 flex items-center gap-3">*/}
+        {/*<div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">*/}
+          {/*<TrendingUp className="w-5 h-5 text-accent" />*/}
+        {/*</div>*/}
+        {/*<div>*/}
+          {/*<p className="font-semibold text-ink">High Impact User</p>*/}
+          {/*<p className="text-sm text-muted">Top 15% of contributors this month</p>*/}
+        {/*</div>*/}
+      {/*</div>*/}
 
       {/* Recent Reports */}
       <section>

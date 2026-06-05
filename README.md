@@ -22,7 +22,7 @@ Capstone project, CIS 498. Group 04, Syed Mehdi.
 | Frontend | React 18 + Vite + Tailwind CSS v4 + Leaflet + Firebase JS SDK |
 | Backend | Python 3.11 + FastAPI + SQLAlchemy 2.0 + Alembic + Firebase Admin SDK |
 | Database | PostgreSQL 16 + PostGIS 3.4 |
-| AI / NLP | scikit-learn (TF-IDF + Calibrated LinearSVC), sentence-transformers (all-MiniLM-L6-v2) |
+| AI / NLP | scikit-learn (TF-IDF + LinearSVC), sentence-transformers (all-MiniLM-L6-v2) |
 | Auth | Firebase Authentication (email/password) |
 | Image storage | Firebase Storage |
 | Real-time | FastAPI WebSockets |
@@ -30,7 +30,7 @@ Capstone project, CIS 498. Group 04, Syed Mehdi.
 
 ## Prerequisites
 
-- *Was Developed and tested on MacOS 26.5*
+*Project was developed and tested on MacOS 26.5*
 - [Git](https://git-scm.com/)
 - [Node.js 20+](https://nodejs.org) (Used Node 24 in dev)
 - [Python 3.11](https://www.python.org/downloads/)
