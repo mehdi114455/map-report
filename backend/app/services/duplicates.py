@@ -32,13 +32,11 @@ def find_duplicate_cluster(
 ) -> tuple[Optional[Report], float]:
     """
     Return (best_matching_report, similarity_score) or (None, 0.0).
-    Builds the comparison point from raw lat/lng so PostGIS receives a clean
-    geography value (avoids issues with passing freshly-flushed WKBElements).
+    Builds the comparison point from raw lat/lng
     """
     cutoff = datetime.now(timezone.utc) - timedelta(days=RECENT_WINDOW_DAYS)
 
     # Build a Geography point inline in SQL — most reliable way to feed
-    # ST_DWithin a fresh value without ORM-side quirks.
     new_point = cast(
         ST_SetSRID(ST_MakePoint(longitude, latitude), 4326),
         Geography(geometry_type="POINT", srid=4326),
