@@ -198,7 +198,7 @@ map-report/
 └── README.md
 ```
 
-## Common tasks
+## Notes
 
 ```bash
 # Reset the local DB completely (destroys all data!)
