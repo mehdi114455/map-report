@@ -190,7 +190,8 @@ function ReportCard({ report }) {
             <StatusChip status={report.current_status} />
           </div>
           <p className="text-sm text-muted mt-1 truncate">
-            {report.location.city || "Unknown location"} ·{" "}
+            {/*{report.location.city || "Unknown location"} ·{" "}*/}
+            {report.location.city || `${report.location.latitude.toFixed(3)}, ${report.location.longitude.toFixed(3)}`}{" · "}
             {formatDistanceToNow(new Date(report.created_at), { addSuffix: true })}
           </p>
         </div>
