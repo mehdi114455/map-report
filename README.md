@@ -201,7 +201,7 @@ map-report/
 ## Notes
 
 ```bash
-# Reset the local DB completely (destroys all data!)
+# Reset the local DB completely (destroys all data)
 docker compose down -v
 docker compose up -d
 cd backend && source .venv/bin/activate
