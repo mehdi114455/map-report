@@ -211,12 +211,6 @@ python -m app.db.seed
 # Re-train the classifier after editing app/ml/training_data.py
 python -m app.ml.train
 
-# Backfill embeddings for reports created before Part 7
-python -m scripts.backfill_embeddings
-
-# Check tables exist
-docker compose exec db psql -U mapreport -d mapreport -c "\dt"
-
 # Quick look at recent reports
 docker compose exec db psql -U mapreport -d mapreport \
   -c "SELECT report_id, category_id, current_status, cluster_id FROM reports ORDER BY report_id DESC LIMIT 10;"
