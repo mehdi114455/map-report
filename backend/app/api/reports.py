@@ -71,9 +71,14 @@ def create_report(
     db.flush()  # get report_id
 
     # Duplicate detection, search for nearby semantically-similar reports.
-    match, score = find_duplicate_cluster(
-        db, embedding, loc.geog, exclude_report_id=report.report_id
-    )
+    match, score = find_duplicate_cluster( db, embedding,
+        latitude=payload.location.latitude,
+        longitude=payload.location.longitude,
+        exclude_report_id=report.report_id,
+        )
+
+
+
     if match is not None:
         link_to_cluster(db, report, match)
 
