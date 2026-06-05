@@ -6,14 +6,14 @@ Capstone project, CIS 498. Group 04, Syed Mehdi.
 
 ## Features
 
-- **Natural-language reporting** — describe the natural language
-- **AI category classification** — TF-IDF + Linear SVM trained on civic issue data (6 categories for MVP)
-- **Duplicate detection** — Sentence transformer + PostGIS proximity merge near identical reports
-- **Photo uploads** — Firebase Storage with size and format validation
-- **Interactive map** — Leaflet + Stadia Maps, with click-to-pin, browser geolocation, and filtering
-- **Admin dashboard** — System stats, hotspot map, urgent-reports queue, re-categorization, status updates that cascade to clusters
-- **Live updates** — WebSocket pushes status changes to residents in real time
-- **Role-based auth** — Firebase Authentication with custom claims for `resident` vs `admin`
+- **Natural-language reporting** - describe the natural language
+- **AI category classification** - TF-IDF + Linear SVM trained on civic issue data (6 categories for MVP)
+- **Duplicate detection** - Sentence transformer + PostGIS proximity merge near identical reports
+- **Photo uploads** - Firebase Storage with size and format validation
+- **Interactive map** - Leaflet + Stadia Maps, with click-to-pin, browser geolocation, and filtering
+- **Admin dashboard** - System stats, hotspot map, urgent-reports queue, re-categorization, status updates that cascade to clusters
+- **Live updates** - WebSocket pushes status changes to residents in real time
+- **Role-based auth** - Firebase Authentication with custom claims for `resident` vs `admin`
 
 ## Tech stack
 
