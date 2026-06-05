@@ -9,6 +9,18 @@ from app.schemas.user import UserOut
 
 app = FastAPI(title="Map Report API", version="0.2.0")
 
+@app.on_event("startup")
+async def warmup_models() -> None:
+    """
+    Load the sentence transformer and classifier
+    """
+    from app.services.embedder import embed
+    from app.services.classifier import classify_with_confidence
+
+    print("[STARTUP] Warming embedder…")
+    embed("warmup")  # forces model load
+    print("[STARTUP] Embedder ready.")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
