@@ -50,6 +50,29 @@ export default function NewReport() {
     setFileError("");
   }
 
+
+  // Auto locate on initial load if the user has already granted
+  // permission.
+  useEffect(() => {
+    if (location) return;
+    if (!navigator.geolocation || !navigator.permissions) return;
+
+    navigator.permissions.query({ name: "geolocation" }).then((perm) => {
+      if (perm.state !== "granted") return;
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setLocation({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          });
+        },
+        () => { /* silent fail — user can still click the button */ },
+        { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+      );
+    }).catch(() => { /* old browser without Permissions API — ignore */ });
+  }, []);  // run once on mount
+
+
   function useMyLocation() {
     if (!navigator.geolocation) {
       setErr("Your browser doesn't support geolocation.");
