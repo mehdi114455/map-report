@@ -1,5 +1,5 @@
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from geoalchemy2.shape import from_shape
@@ -8,7 +8,7 @@ from shapely.geometry import Point
 from app.api.deps import sync_current_user
 from app.db.session import get_db
 from app.db.models import User, Report, Location, StatusHistory, DuplicateCluster
-from app.schemas.report import ReportCreate, ReportOut, ReportStatusUpdate
+from app.schemas.report import ReportCreate, ReportOut, ReportStatusUpdate, ReportCategoryUpdate
 from app.services.sanitize import sanitize_text
 # from app.services.classifier import classify
 from app.services.classifier import classify_with_confidence
@@ -245,20 +245,14 @@ def require_admin(user: User = Depends(sync_current_user)) -> User:
 def update_status(
     report_id: int,
     payload: ReportStatusUpdate,
+    background_tasks: BackgroundTasks,
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> list[Report]:
-    """
-    Update a report's status. If the report belongs to a cluster, ALL reports
-    in that cluster get the same status.
-
-    Returns the list of updated reports.
-    """
     target = db.get(Report, report_id)
     if target is None:
         raise HTTPException(404, "Report not found.")
 
-    # Find all reports in the same cluster (just the target itself if no cluster).
     if target.cluster_id is not None:
         reports = db.scalars(
             select(Report).where(Report.cluster_id == target.cluster_id)
@@ -266,7 +260,6 @@ def update_status(
     else:
         reports = [target]
 
-    # Skip no-op (every report already at the desired status, no note added).
     if all(r.current_status == payload.status for r in reports) and not payload.status_note:
         return reports
 
@@ -282,7 +275,6 @@ def update_status(
             status_note=note,
         ))
 
-    # If the cluster is being resolved, close the cluster too.
     if target.cluster_id is not None and payload.status == "resolved":
         cluster = db.get(DuplicateCluster, target.cluster_id)
         if cluster:
@@ -292,11 +284,46 @@ def update_status(
     for r in reports:
         db.refresh(r)
 
-    # Broadcast one event per affected report. Each event reaches both the
-    # report's owner and all admins.
     from app.api.ws import broadcast_status_change
-    import asyncio
     for r in reports:
-        asyncio.create_task(broadcast_status_change(r))
+        background_tasks.add_task(
+            broadcast_status_change,
+            r.report_id, r.current_status, r.updated_at.isoformat(), r.user_id,
+        )
 
+    return reports
+
+
+@router.patch("/{report_id}/category", response_model=list[ReportOut])
+def update_category(
+    report_id: int,
+    payload: ReportCategoryUpdate,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[Report]:
+    """
+    Admin can correct the AI's category.
+    """
+    from app.db.models import Category
+    target = db.get(Report, report_id)
+    if target is None:
+        raise HTTPException(404, "Report not found.")
+
+    category = db.get(Category, payload.category_id)
+    if category is None:
+        raise HTTPException(404, "Category not found.")
+
+    if target.cluster_id is not None:
+        reports = db.scalars(
+            select(Report).where(Report.cluster_id == target.cluster_id)
+        ).all()
+    else:
+        reports = [target]
+
+    for r in reports:
+        r.category_id = payload.category_id
+
+    db.commit()
+    for r in reports:
+        db.refresh(r)
     return reports

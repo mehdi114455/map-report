@@ -3,20 +3,61 @@ import { Link } from "react-router-dom";
 import { ArrowRight, BadgeCheck, CircleDashed, TrendingUp } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { api } from "../api";
+import { useAuth } from "../AuthContext";
+import { useReportsSocket } from "../lib/useReportsSocket";
 import StatusChip from "../components/StatusChip";
+
 
 export default function Home() {
   const [reports, setReports] = useState([]);
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(true);
 
+  const { user } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Detect admin role from Firebase custom claims.
   useEffect(() => {
+    if (!user) return;
+    user.getIdTokenResult().then((res) => setIsAdmin(res.claims.role === "admin"));
+  }, [user]);
+
+  // Load reports.
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setErr("");
+
     api
       .get("/reports")
-      .then((r) => setReports(r.data))
-      .catch((e) => setErr(e.message))
-      .finally(() => setLoading(false));
+      .then((r) => {
+        if (cancelled) return;
+        setReports(r.data);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        console.error("Failed to load reports:", e);
+        setErr(e.response?.data?.detail || e.message || "Failed to load reports");
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setLoading(false);
+      });
+
+    return () => { cancelled = true; };
   }, []);
+
+  // Live status updates.
+  useReportsSocket((msg) => {
+    if (msg.type !== "status_change") return;
+    setReports((curr) =>
+      curr.map((r) =>
+        r.report_id === msg.report_id
+          ? { ...r, current_status: msg.current_status, updated_at: msg.updated_at }
+          : r
+      )
+    );
+  });
 
   const resolvedCount = reports.filter((r) => r.current_status === "resolved").length;
   const inProgressCount = reports.filter((r) =>
@@ -27,15 +68,19 @@ export default function Home() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-3xl lg:text-4xl font-bold text-ink">Hello, Citizen</h1>
+        <h1 className="text-3xl lg:text-4xl font-bold text-ink">
+          {isAdmin ? "Hello, Admin" : "Hello, Citizen"}
+        </h1>
         <p className="text-muted mt-1">
-          Your reports help make the city a better place. What would you like to update us on today?
+          {isAdmin
+            ? "Monitor citizen reports and infrastructure status across the city."
+            : "Your reports help make the city a better place. What would you like to update us on today?"}
         </p>
       </header>
 
-      {/* Report an Issue hero card */}
+      {/* Hero card — admins go to the dashboard, residents go to new report */}
       <Link
-        to="/report"
+        to={isAdmin ? "/admin" : "/report"}
         className="block bg-accent hover:bg-primary text-white rounded-lg p-5 transition-colors"
       >
         <div className="flex items-center gap-4">
@@ -43,8 +88,12 @@ export default function Home() {
             <ArrowRight className="w-6 h-6" />
           </div>
           <div className="flex-1">
-            <h2 className="font-bold text-lg">Report an Issue</h2>
-            <p className="text-white/85 text-sm">AI-assisted reporting in 30 seconds</p>
+            <h2 className="font-bold text-lg">
+              {isAdmin ? "Open System Dashboard" : "Report an Issue"}
+            </h2>
+            <p className="text-white/85 text-sm">
+              {isAdmin ? "Review reports, hotspots, and clusters" : "AI-assisted reporting in 30 seconds"}
+            </p>
           </div>
           <ArrowRight className="w-5 h-5" />
         </div>

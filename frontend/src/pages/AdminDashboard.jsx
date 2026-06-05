@@ -3,10 +3,10 @@ import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
 import { ClipboardList, AlertTriangle, Layers, TrendingUp } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import "leaflet/dist/leaflet.css";
+import { Link } from "react-router-dom";
 import { api } from "../api";
 import StatusChip from "../components/StatusChip";
 import { useReportsSocket } from "../lib/useReportsSocket";
-import { Link } from "react-router-dom";
 
 const STATUS_OPTIONS = ["pending", "reviewing", "in_progress", "resolved", "rejected"];
 
@@ -15,13 +15,16 @@ export default function AdminDashboard() {
   const [hotspots, setHotspots] = useState([]);
   const [urgent, setUrgent] = useState([]);
   const [err, setErr] = useState("");
+  const [categories, setCategories] = useState([]);
+  const [categoryFilter, setCategoryFilter] = useState(null);
 
   async function refreshAll() {
     try {
+      const urgentParams = categoryFilter ? { params: { category_id: categoryFilter } } : {};
       const [s, h, u] = await Promise.all([
         api.get("/admin/stats"),
         api.get("/admin/hotspots"),
-        api.get("/admin/urgent"),
+        api.get("/admin/urgent", urgentParams),
       ]);
       setStats(s.data);
       setHotspots(h.data);
@@ -31,9 +34,15 @@ export default function AdminDashboard() {
     }
   }
 
-  useEffect(() => { refreshAll(); }, []);
+  // Fetch categories once on mount for the filter chips.
+  useEffect(() => {
+    api.get("/categories").then((r) => setCategories(r.data)).catch(() => {});
+  }, []);
 
-  // Refresh dashboard when any status change comes through.
+  // Refresh dashboard whenever the category filter changes (and on first mount).
+  useEffect(() => { refreshAll(); }, [categoryFilter]);
+
+  // Refresh dashboard when any status change comes through the websocket.
   useReportsSocket((msg) => {
     if (msg.type === "status_change") refreshAll();
   });
@@ -41,7 +50,7 @@ export default function AdminDashboard() {
   async function setStatus(reportId, newStatus) {
     try {
       const res = await api.patch(`/reports/${reportId}/status`, { status: newStatus });
-      // Response is now a list of affected reports (one if standalone, many if cluster).
+      // Response is a list of affected reports (one if standalone, many if cluster).
       const updated = res.data;
       const updatedIds = new Set(updated.map((r) => r.report_id));
       setUrgent((curr) =>
@@ -63,23 +72,34 @@ export default function AdminDashboard() {
         <p className="text-muted mt-1">Real-time monitoring of civic reports and infrastructure status.</p>
       </header>
 
-      {err && <div className="bg-red-50 border border-red-200 text-error rounded p-3 text-sm">{err}</div>}
+      {err && (
+        <div className="bg-red-50 border border-red-200 text-error rounded p-3 text-sm">{err}</div>
+      )}
 
       {/* Top stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <StatCard
-          icon={ClipboardList} iconColor="text-navy" iconBg="bg-blue-50"
-          label="Total Reports" value={stats?.total ?? "—"}
+          icon={ClipboardList}
+          iconColor="text-navy"
+          iconBg="bg-blue-50"
+          label="Total Reports"
+          value={stats?.total ?? "—"}
           sub={stats ? `+${stats.this_week} this week` : ""}
         />
         <StatCard
-          icon={AlertTriangle} iconColor="text-primary" iconBg="bg-orange-50"
-          label="Open Issues" value={stats?.open ?? "—"}
+          icon={AlertTriangle}
+          iconColor="text-primary"
+          iconBg="bg-orange-50"
+          label="Open Issues"
+          value={stats?.open ?? "—"}
           sub="Needs review"
         />
         <StatCard
-          icon={Layers} iconColor="text-accent" iconBg="bg-orange-100"
-          label="Duplicate Clusters" value={stats?.clusters ?? "—"}
+          icon={Layers}
+          iconColor="text-accent"
+          iconBg="bg-orange-100"
+          label="Duplicate Clusters"
+          value={stats?.clusters ?? "—"}
           sub="AI grouped"
         />
       </div>
@@ -96,7 +116,9 @@ export default function AdminDashboard() {
         {hotspots.length === 0 ? (
           <div className="rounded-lg border-2 border-dashed border-outline p-10 text-center text-muted">
             <p>No duplicate clusters yet.</p>
-            <p className="text-xs mt-1">Hotspots appear when multiple residents report the same issue nearby.</p>
+            <p className="text-xs mt-1">
+              Hotspots appear when multiple residents report the same issue nearby.
+            </p>
           </div>
         ) : (
           <div className="rounded-lg overflow-hidden border border-outline" style={{ height: 420 }}>
@@ -107,7 +129,7 @@ export default function AdminDashboard() {
                 url="https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png"
               />
               {hotspots.map((h) => {
-                // Scale circle radius (in pixels) with repeat count, with a sensible floor and cap.
+                // Scale circle radius (in px) with repeat count, with a sensible floor and cap.
                 const radius = Math.min(40, 12 + h.repeated_count * 5);
                 return (
                   <CircleMarker
@@ -142,14 +164,52 @@ export default function AdminDashboard() {
 
       {/* Urgent reports */}
       <section>
-        <h2 className="text-xl font-bold text-ink mb-3">Urgent Reports</h2>
-        {urgent.length === 0 && (
-          <p className="text-muted">Nothing urgent right now — everything's been reviewed.</p>
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+          <h2 className="text-xl font-bold text-ink">Urgent Reports</h2>
+        </div>
+
+        {categories.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            <button
+              onClick={() => setCategoryFilter(null)}
+              className={`px-3 py-1.5 rounded-full text-sm font-semibold border ${
+                !categoryFilter
+                  ? "bg-accent text-white border-accent"
+                  : "bg-white text-ink border-outline hover:border-accent"
+              }`}
+            >
+              All categories
+            </button>
+            {categories.map((c) => (
+              <button
+                key={c.category_id}
+                onClick={() => setCategoryFilter(c.category_id)}
+                className={`px-3 py-1.5 rounded-full text-sm font-semibold border ${
+                  categoryFilter === c.category_id
+                    ? "bg-accent text-white border-accent"
+                    : "bg-white text-ink border-outline hover:border-accent"
+                }`}
+              >
+                {c.category_name}
+              </button>
+            ))}
+          </div>
         )}
 
-<div className="space-y-3">
+        {urgent.length === 0 && (
+          <p className="text-muted">
+            {categoryFilter
+              ? "No urgent reports in this category."
+              : "Nothing urgent right now — everything's been reviewed."}
+          </p>
+        )}
+
+        <div className="space-y-3">
           {urgent.map((r) => (
-            <article key={r.report_id} className="bg-white border border-outline rounded-lg p-4 hover:border-accent transition-colors">
+            <article
+              key={r.report_id}
+              className="bg-white border border-outline rounded-lg p-4 hover:border-accent transition-colors"
+            >
               <Link to={`/reports/${r.report_id}`} className="block">
                 <div className="flex gap-3">
                   {r.image_url && (
@@ -184,19 +244,25 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               </Link>
-              {/* Status selector OUTSIDE the link so clicks don't navigate */}
+
+              {/* Status selector lives outside the <Link> so clicks here don't navigate. */}
               <div className="flex justify-end mt-3 pt-3 border-t border-outline">
                 <select
                   value={r.current_status}
-                  onChange={(e) => { e.stopPropagation(); setStatus(r.report_id, e.target.value); }}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    setStatus(r.report_id, e.target.value);
+                  }}
                   className="text-sm border border-outline rounded px-2 py-1 focus:border-navy outline-none"
                 >
                   {STATUS_OPTIONS.map((s) => (
-                    <option key={s} value={s}>{s.replace("_", " ")}</option>
+                    <option key={s} value={s}>
+                      {s.replace("_", " ")}
+                    </option>
                   ))}
                 </select>
               </div>
-             </article>
+            </article>
           ))}
         </div>
       </section>

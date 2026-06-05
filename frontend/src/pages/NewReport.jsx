@@ -12,7 +12,7 @@ export default function NewReport() {
 
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState(null);
-  const [city, setCity] = useState("");
+  // const [city, setCity] = useState("");
   const [file, setFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [fileError, setFileError] = useState("");
@@ -100,7 +100,7 @@ export default function NewReport() {
         location: {
           latitude: location.latitude,
           longitude: location.longitude,
-          city: city.trim() || undefined,
+          // city: city.trim() || undefined,
         },
         image_url: imageUrl,
       };
@@ -145,7 +145,7 @@ export default function NewReport() {
             minLength={5}
             maxLength={2000}
             rows={4}
-            placeholder="e.g. There's a large pothole on the corner of Main and 4th. It's been there for weeks."
+            placeholder="e.g. There's a large pothole on Salwa Road."
             className="w-full border border-outline rounded px-3 py-2 focus:border-navy outline-none resize-none"
           />
           <p className="text-xs text-muted mt-1">{description.length} / 2000</p>
@@ -212,14 +212,14 @@ export default function NewReport() {
               Pinned at {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}
             </p>
           )}
-          <input
+{/*          <input
             type="text"
             value={city}
             onChange={(e) => setCity(e.target.value)}
             placeholder="City (optional)"
             className="mt-2 w-full border border-outline rounded px-3 py-2 focus:border-navy outline-none"
           />
-        </div>
+*/}        </div>
 
         {err && (
           <div className="bg-red-50 border border-red-200 text-error rounded p-3 text-sm">

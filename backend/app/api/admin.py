@@ -90,12 +90,8 @@ def urgent_reports(
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
     limit: int = 10,
+    category_id: int | None = None,
 ) -> list[dict]:
-    """
-    Reports that need admin attention, grouped by cluster. Each cluster is
-    represented once; standalone reports appear as-is. Sorted by repeated_count
-    (highest first), then recency.
-    """
     stmt = (
         select(Report, DuplicateCluster.repeated_count)
         .outerjoin(DuplicateCluster, Report.cluster_id == DuplicateCluster.cluster_id)
@@ -105,6 +101,8 @@ def urgent_reports(
             Report.created_at.desc(),
         )
     )
+    if category_id is not None:
+        stmt = stmt.where(Report.category_id == category_id)
     rows = db.execute(stmt).all()
 
     seen_clusters: set[int] = set()

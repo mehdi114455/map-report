@@ -4,51 +4,69 @@ import { auth } from "../firebase";
 const WS_URL = import.meta.env.VITE_API_BASE_URL.replace(/^http/, "ws") + "/ws/reports";
 
 /**
- * Live report status updates
- * Auto-reconnects with exponential backoff on disconnect
+ * Subscribe to live report status updates.
  */
 export function useReportsSocket(onMessage) {
-  const wsRef = useRef(null);
   const cbRef = useRef(onMessage);
-  const retryRef = useRef(0);
-  const aliveRef = useRef(true);
 
-  // Always call the latest callback without re-opening the socket on rerender.
   useEffect(() => {
     cbRef.current = onMessage;
   }, [onMessage]);
 
   useEffect(() => {
-    aliveRef.current = true;
+    let ws = null;
+    let retryTimer = null;
+    let retries = 0;
+    let cancelled = false;
 
     async function connect() {
+      if (cancelled) return;
       const user = auth.currentUser;
-      if (!user) return;
-      const token = await user.getIdToken();
-      const url = `${WS_URL}?token=${encodeURIComponent(token)}`;
-      const ws = new WebSocket(url);
-      wsRef.current = ws;
+      if (!user) {
+        // Try again in a after a while
+        retryTimer = setTimeout(connect, 500);
+        return;
+      }
 
-      ws.onopen = () => { retryRef.current = 0; };
+      let token;
+      try {
+        token = await user.getIdToken();
+      } catch {
+        retryTimer = setTimeout(connect, 2000);
+        return;
+      }
+
+
+      if (cancelled) return;
+
+      ws = new WebSocket(`${WS_URL}?token=${encodeURIComponent(token)}`);
+
+      ws.onopen = () => { retries = 0; };
+
       ws.onmessage = (e) => {
         try {
-          const msg = JSON.parse(e.data);
-          cbRef.current?.(msg);
+          cbRef.current?.(JSON.parse(e.data));
         } catch {}
       };
+
       ws.onclose = () => {
-        if (!aliveRef.current) return;
-        const delay = Math.min(30000, 1000 * 2 ** retryRef.current);
-        retryRef.current += 1;
-        setTimeout(connect, delay);
+        if (cancelled) return;
+        // Exponential backoff: 1s, 2s, 4s, 8s, capped at 30s.
+        const delay = Math.min(30000, 1000 * 2 ** retries);
+        retries += 1;
+        retryTimer = setTimeout(connect, delay);
       };
-      ws.onerror = () => ws.close();
+
+      ws.onerror = () => {
+      };
     }
 
     connect();
+
     return () => {
-      aliveRef.current = false;
-      wsRef.current?.close();
+      cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
+      if (ws && ws.readyState <= 1) ws.close();
     };
   }, []);
 }

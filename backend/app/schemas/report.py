@@ -21,6 +21,10 @@ class ReportCreate(BaseModel):
         return v
 
 
+class ReportCategoryUpdate(BaseModel):
+    category_id: int
+
+
 class ClusterOut(BaseModel):
     cluster_id: int
     repeated_count: int

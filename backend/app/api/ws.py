@@ -75,13 +75,18 @@ async def reports_ws(ws: WebSocket):
         manager.disconnect(ws, user_id)
 
 
-async def broadcast_status_change(report: Report) -> None:
-    """Send a status-change event to the report's owner and all admins."""
+async def broadcast_status_change(
+    report_id: int,
+    current_status: str,
+    updated_at: str,
+    user_id: str,
+) -> None:
+    """Send a status change event to the report's owner and all admins."""
     payload = {
         "type": "status_change",
-        "report_id": report.report_id,
-        "current_status": report.current_status,
-        "updated_at": report.updated_at.isoformat(),
+        "report_id": report_id,
+        "current_status": current_status,
+        "updated_at": updated_at,
     }
-    await manager.send_to_user(report.user_id, payload)
+    await manager.send_to_user(user_id, payload)
     await manager.send_to_admins(payload)
