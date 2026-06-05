@@ -27,7 +27,7 @@ export default function Layout() {
         <div className="max-w-page mx-auto flex items-center justify-between px-4 lg:px-6 py-3">
           <Link to="/" className="flex items-center gap-2">
             <Building2 className="w-6 h-6 text-accent" />
-            <span className="font-bold text-lg text-ink">CivicReport AI</span>
+            <span className="font-bold text-lg text-ink">MapReport AI</span>
           </Link>
           <div className="flex items-center gap-3 text-sm">
             {user && ( <>{isAdmin && (
