@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 from geoalchemy2.shape import from_shape
 from shapely.geometry import Point
+from sqlalchemy import select, func
 
 from app.api.deps import sync_current_user
 from app.db.session import get_db
